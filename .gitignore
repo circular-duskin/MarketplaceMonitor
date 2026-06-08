@@ -1,0 +1,18 @@
+# Secrets and credentials
+config.py
+
+# Runtime data (delete seen_listings.json locally to reset dedup)
+seen_listings.json
+listings.log
+listings_db.json
+last_queried.json
+feedback.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# macOS
+.DS_Store

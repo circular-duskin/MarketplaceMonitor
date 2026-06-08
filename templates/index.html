@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dress Monitor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f4f4f6;
+      color: #222;
+    }
+
+    header {
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    #last-queried {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: #aaa;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    #counter {
+      background: #efefef;
+      color: #555;
+      font-size: 0.8rem;
+      font-weight: 500;
+      padding: 3px 11px;
+      border-radius: 99px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 20px;
+      padding: 28px 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .card.removing {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+
+    .card.liked {
+      outline: 2px solid #2e7d32;
+    }
+
+    .card.liked .card-actions,
+    .card.skipped .card-actions {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .card img {
+      width: 100%;
+      height: 260px;
+      object-fit: cover;
+      background: #f0f0f0;
+      display: block;
+    }
+
+    .card-body {
+      padding: 14px 16px 10px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card-title {
+      font-size: 0.88rem;
+      font-weight: 500;
+      line-height: 1.4;
+      color: #111;
+    }
+
+    .card-price {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111;
+    }
+
+    .card-meta {
+      font-size: 0.78rem;
+      color: #888;
+    }
+
+    .card-link {
+      font-size: 0.78rem;
+      color: #0064d2;
+      text-decoration: none;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .card-link:hover { text-decoration: underline; }
+
+    .card-actions {
+      display: flex;
+      border-top: 1px solid #f0f0f0;
+      margin-top: 10px;
+    }
+
+    .card-actions button {
+      flex: 1;
+      padding: 13px 6px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+
+    .btn-like   { color: #2e7d32; }
+    .btn-like:hover   { background: #f0faf0; }
+
+    .btn-dislike { color: #c62828; }
+    .btn-dislike:hover { background: #fff5f5; }
+
+    .btn-skip   { color: #999; }
+    .btn-skip:hover   { background: #f7f7f7; }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: #888;
+    }
+    .empty h2 { font-size: 1.2rem; color: #555; margin-bottom: 8px; }
+    .empty p  { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Figure Skating Dresses</h1>
+    <span id="counter">
+      {% if unreviewed %}{{ unreviewed }} to review{% else %}All caught up{% endif %}
+    </span>
+    <span id="last-queried">Last checked: {{ last_queried }}</span>
+  </header>
+
+  <div class="grid" id="grid">
+    {% if listings %}
+      {% for listing in listings %}
+      <div class="card{% if listing.already_liked %} liked{% endif %}" data-id="{{ listing.id }}">
+        <img src="{{ listing.image | replace('s-l225', 's-l500') }}"
+             alt="{{ listing.title }}"
+             onerror="this.style.display='none'">
+        <div class="card-body">
+          <div class="card-title">{{ listing.title }}</div>
+          <div class="card-price">${{ "%.2f" | format(listing.price) }}</div>
+          <div class="card-meta">{{ listing.condition }} &middot; {{ listing.seller }}</div>
+          <a class="card-link" href="{{ listing.url }}" target="_blank">View on eBay &rarr;</a>
+        </div>
+        <div class="card-actions">
+          <button class="btn-like">Like</button>
+          <button class="btn-dislike">Dislike</button>
+          <button class="btn-skip">Skip</button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">
+        <h2>All caught up!</h2>
+        <p>No unreviewed listings. Run <code>python scraper.py</code> to find new ones.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <script>
+    let remaining = {{ unreviewed }};
+    const counter = document.getElementById('counter');
+    const grid    = document.getElementById('grid');
+
+    function updateCounter() {
+      remaining--;
+      counter.textContent = remaining === 1 ? '1 to review'
+                          : remaining > 1   ? `${remaining} to review`
+                          : 'All caught up';
+    }
+
+    function rate(card, itemId, action) {
+      fetch('/rate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, action: action })
+      })
+      .then(r => r.json())
+      .then(() => {
+        if (action === 'skip') {
+          card.classList.add('skipped');
+          return;
+        }
+        if (action === 'like') {
+          card.classList.add('liked');
+          updateCounter();
+          return;
+        }
+        card.classList.add('removing');
+        setTimeout(() => {
+          card.remove();
+          updateCounter();
+          if (remaining === 0) {
+            grid.innerHTML = `
+              <div class="empty">
+                <h2>All caught up!</h2>
+                <p>No more listings to review. Run <code>python scraper.py</code> to find new ones.</p>
+              </div>`;
+          }
+        }, 260);
+      });
+    }
+
+    document.querySelectorAll('.card').forEach(card => {
+      const itemId = card.dataset.id;
+      card.querySelector('.btn-like').addEventListener('click',    () => rate(card, itemId, 'like'));
+      card.querySelector('.btn-dislike').addEventListener('click', () => rate(card, itemId, 'dislike'));
+      card.querySelector('.btn-skip').addEventListener('click',    () => rate(card, itemId, 'skip'));
+    });
+  </script>
+
+</body>
+</html>
