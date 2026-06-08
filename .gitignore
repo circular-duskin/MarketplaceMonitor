@@ -1,6 +1,3 @@
-# Secrets and credentials
-config.py
-
 # Runtime data (delete seen_listings.json locally to reset dedup)
 seen_listings.json
 listings.log

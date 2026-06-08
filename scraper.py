@@ -74,7 +74,7 @@ def get_access_token() -> str:
     # eBay client credentials flow requires Client ID + Client Secret.
     # If you only have an App ID, see README for how to get Client Secret.
     client_id = config.EBAY_APP_ID
-    client_secret = os.environ.get("EBAY_CLIENT_SECRET", "")
+    client_secret = config.EBAY_CLIENT_SECRET
 
     if not client_secret:
         raise EnvironmentError(
