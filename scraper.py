@@ -259,6 +259,7 @@ def run_scrape() -> int:
                 "url": item.get("itemWebUrl", ""),
                 "image": item.get("image", {}).get("imageUrl", ""),
                 "found_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "listed_at": item.get("itemCreationDate", ""),
             }
 
             seen.add(item_id)

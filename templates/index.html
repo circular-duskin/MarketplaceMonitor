@@ -179,7 +179,7 @@
         <div class="card-body">
           <div class="card-title">{{ listing.title }}</div>
           <div class="card-price">${{ "%.2f" | format(listing.price) }}</div>
-          <div class="card-meta">{{ listing.condition }} &middot; {{ listing.seller }}</div>
+          <div class="card-meta">{{ listing.condition }} &middot; {{ listing.seller }}{% if listing.age %} &middot; {{ listing.age }}{% endif %}</div>
           <a class="card-link" href="{{ listing.url }}" target="_blank">View on eBay &rarr;</a>
         </div>
         <div class="card-actions">

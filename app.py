@@ -11,7 +11,7 @@ import json
 import os
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import schedule
@@ -37,6 +37,21 @@ def _scheduler_loop():
 def start_scheduler():
     t = threading.Thread(target=_scheduler_loop, daemon=True)
     t.start()
+
+
+def listing_age(listed_at: str) -> str:
+    if not listed_at:
+        return ""
+    try:
+        dt = datetime.fromisoformat(listed_at.replace("Z", "+00:00"))
+        days = (datetime.now(timezone.utc) - dt).days
+        if days == 0:
+            return "Listed today"
+        if days == 1:
+            return "Listed yesterday"
+        return f"Listed {days} days ago"
+    except Exception:
+        return ""
 
 
 def load_json(path, default):
@@ -65,6 +80,7 @@ def index():
             "id": item_id,
             **item,
             "already_liked": fb.get("liked", False) if fb else False,
+            "age": listing_age(item.get("listed_at", "")),
         })
     listings.sort(key=lambda x: x.get("found_at", ""), reverse=True)
 
