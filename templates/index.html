@@ -149,6 +149,27 @@
     .btn-skip   { color: #999; }
     .btn-skip:hover   { background: #f7f7f7; }
 
+    .card-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-griffies  { background: #e8f0fe; color: #1a56db; }
+    .badge-competition { background: #fef3c7; color: #92400e; }
+    .badge-custom    { background: #f3e8ff; color: #6b21a8; }
+    .badge-watchers  { background: #f0fdf4; color: #166534; }
+
     .empty {
       grid-column: 1 / -1;
       text-align: center;
@@ -180,6 +201,14 @@
           <div class="card-title">{{ listing.title }}</div>
           <div class="card-price">${{ "%.2f" | format(listing.price) }}</div>
           <div class="card-meta">{{ listing.condition }} &middot; {{ listing.seller }}{% if listing.age %} &middot; {{ listing.age }}{% endif %}</div>
+          <div class="card-badges">
+            {% if listing.query_label %}
+              <span class="badge badge-{{ listing.query_label | lower }}">{{ listing.query_label }}</span>
+            {% endif %}
+            {% if listing.watch_count %}
+              <span class="badge badge-watchers">{{ listing.watch_count }} watching</span>
+            {% endif %}
+          </div>
           <a class="card-link" href="{{ listing.url }}" target="_blank">View on eBay &rarr;</a>
         </div>
         <div class="card-actions">

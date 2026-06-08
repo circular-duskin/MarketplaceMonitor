@@ -223,6 +223,7 @@ def run_scrape() -> int:
         except requests.HTTPError as e:
             log.error(f"eBay API error for '{query}': {e}")
             continue
+        query_label = query.split()[-1].capitalize()  # "Brad griffies" → "Griffies", "competition" → "Competition"
 
         log.info(f"  → {len(items)} results returned")
 
@@ -260,6 +261,8 @@ def run_scrape() -> int:
                 "image": item.get("image", {}).get("imageUrl", ""),
                 "found_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "listed_at": item.get("itemCreationDate", ""),
+                "watch_count": item.get("watchCount", 0),
+                "query_label": query_label,
             }
 
             seen.add(item_id)

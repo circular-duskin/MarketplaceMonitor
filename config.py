@@ -6,7 +6,9 @@ EBAY_CLIENT_SECRET = os.environ.get("EBAY_CLIENT_SECRET", "")
 
 # --- Search Terms ---
 SEARCH_QUERIES = [
-    "figure skating dresses brad griffies",
+    "figure skating dress brad griffies",
+    "figure skating dress competition",
+    "figure skating dress custom",
 ]
 
 # --- Filters ---
