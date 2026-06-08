@@ -1,20 +1,42 @@
 """
 app.py — Web interface for reviewing listings.
+Also runs the scraper scheduler in a background thread.
 
 Usage:
     python app.py
-    Open http://localhost:5000 in your browser.
+    Open http://localhost:8080 in your browser.
 """
 
 import json
+import os
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
+import schedule
 from flask import Flask, jsonify, render_template, request
 
 import config
+from scraper import run_scrape
 
 app = Flask(__name__)
+
+
+def _scheduler_loop():
+    def job():
+        run_scrape()
+
+    job()  # run immediately on start
+    schedule.every(config.CHECK_INTERVAL_MINUTES).minutes.do(job)
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
+
+
+def start_scheduler():
+    t = threading.Thread(target=_scheduler_loop, daemon=True)
+    t.start()
 
 
 def load_json(path, default):
@@ -82,4 +104,6 @@ def rate():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080)
+    start_scheduler()
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=False)
