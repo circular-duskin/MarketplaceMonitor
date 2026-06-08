@@ -4,8 +4,19 @@ import os
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
 EBAY_CLIENT_SECRET = os.environ.get("EBAY_CLIENT_SECRET", "")
 
-# --- Search Terms ---
+# --- Etsy API Credentials ---
+# Get your API key free at: https://www.etsy.com/developers
+ETSY_API_KEY = os.environ.get("ETSY_API_KEY", "")
+
+# --- eBay Search Terms ---
 SEARCH_QUERIES = [
+    "figure skating dress brad griffies",
+    "figure skating dress competition",
+    "figure skating dress custom",
+]
+
+# --- Etsy Search Terms ---
+ETSY_SEARCH_QUERIES = [
     "figure skating dress brad griffies",
     "figure skating dress competition",
     "figure skating dress custom",
