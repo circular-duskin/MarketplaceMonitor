@@ -12,6 +12,7 @@ import os
 import threading
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 import schedule
@@ -37,6 +38,21 @@ def _scheduler_loop():
 def start_scheduler():
     t = threading.Thread(target=_scheduler_loop, daemon=True)
     t.start()
+
+
+_PT = ZoneInfo("America/Los_Angeles")
+
+
+def to_pacific(dt_str: str) -> str:
+    if not dt_str or dt_str == "Never":
+        return "Never"
+    try:
+        dt = datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        pt = dt.astimezone(_PT)
+        tz_label = "PDT" if pt.dst() else "PST"
+        return pt.strftime(f"%b %-d, %Y %-I:%M %p {tz_label}")
+    except Exception:
+        return dt_str
 
 
 def listing_age(listed_at: str) -> str:
@@ -85,7 +101,7 @@ def index():
     listings.sort(key=lambda x: x.get("found_at", ""), reverse=True)
 
     unreviewed = sum(1 for l in listings if not l["already_liked"])
-    last_queried = load_json(config.LAST_QUERIED_FILE, {}).get("last_queried", "Never")
+    last_queried = to_pacific(load_json(config.LAST_QUERIED_FILE, {}).get("last_queried", "Never"))
     return render_template("index.html", listings=listings, unreviewed=unreviewed, last_queried=last_queried)
 
 
