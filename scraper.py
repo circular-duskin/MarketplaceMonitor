@@ -142,30 +142,6 @@ def search_ebay(query: str, token: str) -> list[dict]:
     return resp.json().get("itemSummaries", [])
 
 
-# ── Etsy API ───────────────────────────────────────────────────────────────────
-
-def search_etsy(query: str) -> list[dict]:
-    """Search Etsy active listings."""
-    if not config.ETSY_API_KEY:
-        return []
-    resp = requests.get(
-        "https://openapi.etsy.com/v3/application/listings/active",
-        headers={"x-api-key": config.ETSY_API_KEY},
-        params={
-            "keywords": query,
-            "min_price": config.MIN_PRICE_USD,
-            "max_price": config.MAX_PRICE_USD,
-            "limit": config.RESULTS_PER_QUERY,
-            "sort_on": "created",
-            "sort_order": "desc",
-            "includes": "Images,Shop",
-        },
-        timeout=15,
-    )
-    resp.raise_for_status()
-    return resp.json().get("results", [])
-
-
 # ── Filtering ──────────────────────────────────────────────────────────────────
 
 def matches_size(title: str) -> bool:
@@ -294,59 +270,6 @@ def run_scrape() -> int:
             listing_logger.info(format_listing(item, seller_tag))
             tag_str = f" [{seller_tag}]" if seller_tag else ""
             log.info(f"  ✓ New listing: {title[:60]}{tag_str}")
-
-    for query in config.ETSY_SEARCH_QUERIES:
-        log.info(f"[Etsy] Searching: '{query}'")
-        try:
-            items = search_etsy(query)
-        except requests.HTTPError as e:
-            log.error(f"Etsy API error for '{query}': {e}")
-            continue
-        query_label = query.split()[-1].capitalize()
-
-        log.info(f"  → {len(items)} results returned")
-
-        for item in items:
-            item_id = f"etsy_{item.get('listing_id')}"
-            if not item_id or item_id in seen:
-                continue
-
-            title = item.get("title", "")
-            price_data = item.get("price", {})
-            price = price_data.get("amount", 0) / max(price_data.get("divisor", 100), 1)
-
-            if not (config.MIN_PRICE_USD <= price <= config.MAX_PRICE_USD):
-                continue
-
-            images = item.get("images", [])
-            image_url = images[0].get("url_570xN", "") if images else ""
-
-            creation_ts = item.get("creation_timestamp", 0)
-            listed_at = (
-                datetime.utcfromtimestamp(creation_ts).strftime("%Y-%m-%dT%H:%M:%S+00:00")
-                if creation_ts else ""
-            )
-
-            seller = item.get("shop", {}).get("shop_name", "unknown") if item.get("shop") else "unknown"
-
-            listings_db[item_id] = {
-                "title": title,
-                "price": price,
-                "condition": "vintage" if item.get("is_vintage") else "",
-                "seller": seller,
-                "location": "",
-                "url": item.get("url", ""),
-                "image": image_url,
-                "found_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "listed_at": listed_at,
-                "watch_count": item.get("num_favorers", 0),
-                "query_label": query_label,
-                "source": "etsy",
-            }
-
-            seen.add(item_id)
-            new_count += 1
-            log.info(f"  ✓ [Etsy] New listing: {title[:60]}")
 
     save_seen(seen)
     save_listings_db(listings_db)
