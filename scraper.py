@@ -142,6 +142,20 @@ def search_ebay(query: str, token: str) -> list[dict]:
     return resp.json().get("itemSummaries", [])
 
 
+# ── BradGStock ─────────────────────────────────────────────────────────────────
+
+def search_bradg(collection: str) -> list[dict]:
+    """Fetch all products from a bradgstock.com collection."""
+    resp = requests.get(
+        f"https://bradgstock.com/collections/{collection}/products.json",
+        headers={"User-Agent": "Mozilla/5.0"},
+        params={"limit": 250},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json().get("products", [])
+
+
 # ── Filtering ──────────────────────────────────────────────────────────────────
 
 def matches_size(title: str) -> bool:
@@ -270,6 +284,54 @@ def run_scrape() -> int:
             listing_logger.info(format_listing(item, seller_tag))
             tag_str = f" [{seller_tag}]" if seller_tag else ""
             log.info(f"  ✓ New listing: {title[:60]}{tag_str}")
+
+    for collection in config.BRADG_COLLECTIONS:
+        log.info(f"[BradGStock] Checking collection: {collection}")
+        try:
+            products = search_bradg(collection)
+        except requests.HTTPError as e:
+            log.error(f"BradGStock error for '{collection}': {e}")
+            continue
+
+        log.info(f"  → {len(products)} products found")
+
+        for product in products:
+            title = product.get("title", "")
+
+            # Size filter — title must contain one of the configured sizes
+            if not any(size.lower() in title.lower() for size in config.BRADG_SIZES):
+                continue
+
+            item_id = f"bradg_{product.get('id')}"
+            if item_id in seen:
+                continue
+
+            variant = product.get("variants", [{}])[0]
+            if not variant.get("available", False):
+                continue
+
+            price = float(variant.get("price", 0))
+            image = product.get("images", [{}])[0].get("src", "") if product.get("images") else ""
+            handle = product.get("handle", "")
+
+            listings_db[item_id] = {
+                "title": title,
+                "price": price,
+                "condition": "new",
+                "seller": "BradGStock",
+                "location": "",
+                "url": f"https://bradgstock.com/products/{handle}",
+                "image": image,
+                "found_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "listed_at": product.get("created_at", ""),
+                "watch_count": 0,
+                "query_label": "Griffies",
+                "source": "bradg",
+            }
+
+            seen.add(item_id)
+            new_count += 1
+            log.info(f"  ✓ [BradGStock] New listing: {title}")
 
     save_seen(seen)
     save_listings_db(listings_db)

@@ -165,6 +165,7 @@
       letter-spacing: 0.03em;
     }
 
+    .badge-bradg       { background: #fff3e0; color: #e65100; }
     .badge-griffies    { background: #e8f0fe; color: #1a56db; }
     .badge-competition { background: #fef3c7; color: #92400e; }
     .badge-custom      { background: #f3e8ff; color: #6b21a8; }
@@ -202,6 +203,9 @@
           <div class="card-price">${{ "%.2f" | format(listing.price) }}</div>
           <div class="card-meta">{{ listing.condition }} &middot; {{ listing.seller }}{% if listing.age %} &middot; {{ listing.age }}{% endif %}</div>
           <div class="card-badges">
+            {% if listing.source == "bradg" %}
+              <span class="badge badge-bradg">BradGStock</span>
+            {% endif %}
             {% if listing.query_label %}
               <span class="badge badge-{{ listing.query_label | lower }}">{{ listing.query_label }}</span>
             {% endif %}

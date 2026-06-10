@@ -22,6 +22,10 @@ SIZE_ASPECTS = ["S", "XS", "4", "6"]
 DEPARTMENT = "Women"
 SIZE_KEYWORDS = []
 
+# --- BradGStock (bradgstock.com) ---
+BRADG_COLLECTIONS = ["dresses", "beaded", "un-beaded-stock", "stock-sale"]
+BRADG_SIZES = ["Adult Small", "Adult XSmall"]  # must appear in product title
+
 # --- Scheduling ---
 CHECK_INTERVAL_MINUTES = 360
 
