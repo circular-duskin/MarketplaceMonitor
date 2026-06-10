@@ -213,7 +213,7 @@
               <span class="badge badge-watchers">{{ listing.watch_count }} watching</span>
             {% endif %}
           </div>
-          <a class="card-link" href="{{ listing.url }}" target="_blank">View on eBay &rarr;</a>
+          <a class="card-link" href="{{ listing.url }}" target="_blank">View on {% if listing.source == "bradg" %}BradGStock{% else %}eBay{% endif %} &rarr;</a>
         </div>
         <div class="card-actions">
           <button class="btn-like">Like</button>
