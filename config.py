@@ -15,7 +15,7 @@ SEARCH_QUERIES = [
 # --- Filters ---
 MAX_PRICE_USD = 800
 MIN_PRICE_USD = 10
-CONDITION = "used"
+CONDITION = ""
 
 EBAY_CATEGORY_ID = "261510"
 SIZE_ASPECTS = ["S", "XS", "4", "6"]
