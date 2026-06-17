@@ -171,6 +171,34 @@
     .badge-custom      { background: #f3e8ff; color: #6b21a8; }
     .badge-watchers    { background: #f0fdf4; color: #166534; }
 
+    .badge-ai-high   { background: #dcfce7; color: #166534; cursor: pointer; }
+    .badge-ai-mid    { background: #fef9c3; color: #854d0e; cursor: pointer; }
+    .badge-ai-low    { background: #fee2e2; color: #991b1b; cursor: pointer; }
+
+    .ai-reasoning {
+      display: none;
+      font-size: 0.75rem;
+      color: #555;
+      background: #f9f9f9;
+      border-left: 3px solid #ddd;
+      padding: 6px 10px;
+      margin-top: 6px;
+      border-radius: 4px;
+      line-height: 1.5;
+    }
+
+    .btn-rescore {
+      font-size: 0.78rem;
+      padding: 5px 14px;
+      border: 1px solid #ddd;
+      border-radius: 99px;
+      background: white;
+      cursor: pointer;
+      color: #555;
+      margin-left: 10px;
+    }
+    .btn-rescore:hover { background: #f4f4f6; }
+
     .empty {
       grid-column: 1 / -1;
       text-align: center;
@@ -189,6 +217,7 @@
       {% if unreviewed %}{{ unreviewed }} to review{% else %}All caught up{% endif %}
     </span>
     <span id="last-queried">Last checked: {{ last_queried }}</span>
+    <button class="btn-rescore" onclick="rescore()">Rescore</button>
   </header>
 
   <div class="grid" id="grid">
@@ -211,6 +240,18 @@
             {% endif %}
             {% if listing.watch_count %}
               <span class="badge badge-watchers">{{ listing.watch_count }} watching</span>
+            {% endif %}
+            {% if listing.ai_score is not none %}
+              {% if listing.ai_score >= 7 %}
+                <span class="badge badge-ai-high" onclick="toggleReason(this)">AI {{ listing.ai_score }}/10</span>
+              {% elif listing.ai_score >= 5 %}
+                <span class="badge badge-ai-mid" onclick="toggleReason(this)">AI {{ listing.ai_score }}/10</span>
+              {% else %}
+                <span class="badge badge-ai-low" onclick="toggleReason(this)">AI {{ listing.ai_score }}/10</span>
+              {% endif %}
+              {% if listing.ai_reasoning %}
+                <div class="ai-reasoning">{{ listing.ai_reasoning }}</div>
+              {% endif %}
             {% endif %}
           </div>
           <a class="card-link" href="{{ listing.url }}" target="_blank">View on {% if listing.source == "bradg" %}BradGStock{% else %}eBay{% endif %} &rarr;</a>
@@ -272,6 +313,16 @@
           }
         }, 260);
       });
+    }
+
+    function toggleReason(badge) {
+      const reasoning = badge.parentElement.querySelector('.ai-reasoning');
+      if (reasoning) reasoning.style.display = reasoning.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function rescore() {
+      fetch('/rescore', { method: 'POST' })
+        .then(() => alert('Rescoring in background — reload the page in a minute to see updated scores.'));
     }
 
     document.querySelectorAll('.card').forEach(card => {

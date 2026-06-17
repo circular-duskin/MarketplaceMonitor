@@ -19,14 +19,21 @@ import schedule
 from flask import Flask, jsonify, render_template, request
 
 import config
-from scraper import run_scrape
+from scraper import run_scrape, save_listings_db
+from reasoner import run_reasoning
 
 app = Flask(__name__)
+log = app.logger
 
 
 def _scheduler_loop():
     def job():
         run_scrape()
+        listings_db = load_json(config.LISTINGS_DB, {})
+        feedback = load_json(config.FEEDBACK_FILE, {})
+        updated_db, count = run_reasoning(listings_db, feedback)
+        if count:
+            save_listings_db(updated_db)
 
     job()  # run immediately on start
     schedule.every(config.CHECK_INTERVAL_MINUTES).minutes.do(job)
@@ -97,8 +104,10 @@ def index():
             **item,
             "already_liked": fb.get("liked", False) if fb else False,
             "age": listing_age(item.get("listed_at", "")),
+            "ai_score": item.get("ai_score"),
+            "ai_reasoning": item.get("ai_reasoning", ""),
         })
-    listings.sort(key=lambda x: x.get("found_at", ""), reverse=True)
+    listings.sort(key=lambda x: (x["ai_score"] is not None, x.get("ai_score", 0), x.get("found_at", "")), reverse=True)
 
     unreviewed = sum(1 for l in listings if not l["already_liked"])
     last_queried = to_pacific(load_json(config.LAST_QUERIED_FILE, {}).get("last_queried", "Never"))
@@ -132,6 +141,19 @@ def rate():
     }
     save_json(config.FEEDBACK_FILE, feedback)
 
+    return jsonify({"ok": True})
+
+
+@app.route("/rescore", methods=["POST"])
+def rescore():
+    def do_rescore():
+        listings_db = load_json(config.LISTINGS_DB, {})
+        feedback = load_json(config.FEEDBACK_FILE, {})
+        updated_db, count = run_reasoning(listings_db, feedback, force_rescore=True)
+        save_listings_db(updated_db)
+        log.info(f"Rescore complete: {count} listing(s) scored.")
+
+    threading.Thread(target=do_rescore, daemon=True).start()
     return jsonify({"ok": True})
 
 
