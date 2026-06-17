@@ -74,8 +74,12 @@
       outline: 2px solid #2e7d32;
     }
 
-    .card.liked .card-actions,
     .card.skipped .card-actions {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    .card.liked .btn-like {
       pointer-events: none;
       opacity: 0.4;
     }
@@ -284,6 +288,7 @@
     }
 
     function rate(card, itemId, action) {
+      const wasLiked = card.classList.contains('liked');
       fetch('/rate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -300,6 +305,8 @@
           updateCounter();
           return;
         }
+        // dislike: if reversing a like, add back to unreviewed count before removing
+        if (wasLiked) remaining++;
         card.classList.add('removing');
         setTimeout(() => {
           card.remove();
