@@ -4,8 +4,8 @@ import os
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
 EBAY_CLIENT_SECRET = os.environ.get("EBAY_CLIENT_SECRET", "")
 
-# --- Gemini API (free tier at aistudio.google.com) ---
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+# --- Anthropic API (claude.ai/settings → API Keys) ---
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 
 
 # --- eBay Search Terms ---

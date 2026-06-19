@@ -1,107 +1,137 @@
 """
-reasoner.py — Scores listings using Gemini Vision based on the user's visual taste profile.
+reasoner.py — Scores listings using Claude vision based on the user's visual taste profile.
 
-Requires GEMINI_API_KEY env var and at least one liked listing with an image.
+Requires ANTHROPIC_API_KEY env var and at least one liked listing with an image.
 """
 
-import io
+import base64
 import logging
 import time
 
 import requests
+import anthropic
 
 import config
 
 log = logging.getLogger(__name__)
 
-_model = None
+_client = None
 
-def _get_model():
-    global _model
-    if _model is not None:
-        return _model
-    if not config.GEMINI_API_KEY:
+
+def _get_client():
+    global _client
+    if _client is not None:
+        return _client
+    if not config.ANTHROPIC_API_KEY:
         return None
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=config.GEMINI_API_KEY)
-        _model = genai.GenerativeModel("gemini-2.0-flash")
-        return _model
+        _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        return _client
     except Exception as e:
-        log.error(f"Could not initialize Gemini: {e}")
+        log.error(f"Could not initialize Anthropic client: {e}")
         return None
 
 
-def _load_image(url: str):
-    from PIL import Image
+def _load_image_b64(url: str) -> tuple:
+    """Download image and return (base64_data, media_type)."""
     resp = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
     resp.raise_for_status()
-    return Image.open(io.BytesIO(resp.content)).convert("RGB")
+    media_type = resp.headers.get("Content-Type", "image/jpeg").split(";")[0].strip()
+    if media_type not in ("image/jpeg", "image/png", "image/gif", "image/webp"):
+        media_type = "image/jpeg"
+    return base64.standard_b64encode(resp.content).decode("utf-8"), media_type
+
+
+def _image_block(url: str) -> dict | None:
+    try:
+        data, media_type = _load_image_b64(url)
+        return {
+            "type": "image",
+            "source": {"type": "base64", "media_type": media_type, "data": data},
+        }
+    except Exception as e:
+        log.debug(f"Skipping image {url}: {e}")
+        return None
 
 
 def build_taste_profile(liked_listings: list) -> str:
     """Analyze liked dress images and return a written visual taste profile."""
-    model = _get_model()
-    if not model or not liked_listings:
+    client = _get_client()
+    if not client or not liked_listings:
         return ""
 
-    parts = ["Here are figure skating dresses this user has liked:"]
+    content = [{"type": "text", "text": "Here are figure skating dresses this user has liked:"}]
     loaded = 0
     for listing in liked_listings[:6]:
         url = listing.get("image", "")
         if not url:
             continue
-        try:
-            parts.append(_load_image(url))
-            parts.append(f"${listing.get('price', 0):.2f}")
+        block = _image_block(url)
+        if block:
+            content.append(block)
+            content.append({"type": "text", "text": f"${listing.get('price', 0):.2f}"})
             loaded += 1
-        except Exception as e:
-            log.debug(f"Skipping image {url}: {e}")
         if loaded >= 5:
             break
 
     if loaded == 0:
         return ""
 
-    parts.append(
-        "\nDescribe this user's visual taste profile in 3-4 sentences. "
-        "Focus on: silhouette, colors, embellishments, fabric/texture, and overall aesthetic. "
-        "Be specific and concrete."
-    )
+    content.append({
+        "type": "text",
+        "text": (
+            "Describe this user's visual taste profile in 3-4 sentences. "
+            "Focus on: silhouette, colors, embellishments, fabric/texture, and overall aesthetic. "
+            "Be specific and concrete."
+        ),
+    })
 
     try:
-        response = model.generate_content(parts)
-        return response.text.strip()
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=256,
+            messages=[{"role": "user", "content": content}],
+        )
+        return response.content[0].text.strip()
     except Exception as e:
-        log.error(f"Gemini taste profile error: {e}")
+        log.error(f"Claude taste profile error: {e}")
         return ""
 
 
 def score_listing(listing: dict, taste_profile: str) -> tuple:
     """Score one listing image against the taste profile. Returns (score, reason)."""
-    model = _get_model()
+    client = _get_client()
     url = listing.get("image", "")
-    if not model or not url or not taste_profile:
+    if not client or not url or not taste_profile:
         return None, None
 
-    try:
-        img = _load_image(url)
-    except Exception as e:
-        log.debug(f"Could not load image for scoring: {e}")
+    block = _image_block(url)
+    if not block:
         return None, None
 
-    prompt = (
-        f"User's visual taste profile for figure skating dresses:\n{taste_profile}\n\n"
-        "Rate this dress 1-10 on how well it matches the profile. "
-        "Reply in this exact format:\n"
-        "SCORE: [1-10]\n"
-        "REASON: [one sentence]"
-    )
+    content = [
+        {
+            "type": "text",
+            "text": (
+                f"User's visual taste profile for figure skating dresses:\n{taste_profile}\n\n"
+                "Rate this dress 1-10 on how well it matches the profile. "
+                "Reply in this exact format:\n"
+                "SCORE: [1-10]\n"
+                "REASON: [one sentence]"
+            ),
+        },
+        block,
+    ]
 
     try:
-        response = model.generate_content([prompt, img])
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=128,
+            messages=[{"role": "user", "content": content}],
+        )
+        text = response.content[0].text.strip()
         score, reason = None, None
-        for line in response.text.strip().splitlines():
+        for line in text.splitlines():
             if line.startswith("SCORE:"):
                 try:
                     score = int(line.replace("SCORE:", "").strip())
@@ -111,7 +141,7 @@ def score_listing(listing: dict, taste_profile: str) -> tuple:
                 reason = line.replace("REASON:", "").strip()
         return score, reason
     except Exception as e:
-        log.error(f"Gemini scoring error: {e}")
+        log.error(f"Claude scoring error: {e}")
         return None, None
 
 
@@ -120,8 +150,8 @@ def run_reasoning(listings_db: dict, feedback: dict, force_rescore: bool = False
 
     Returns (updated_listings_db, count_scored).
     """
-    if not config.GEMINI_API_KEY:
-        log.info("GEMINI_API_KEY not set — skipping reasoning.")
+    if not config.ANTHROPIC_API_KEY:
+        log.info("ANTHROPIC_API_KEY not set — skipping reasoning.")
         return listings_db, 0
 
     liked_ids = [k for k, v in feedback.items() if v.get("liked")]
@@ -155,6 +185,6 @@ def run_reasoning(listings_db: dict, feedback: dict, force_rescore: bool = False
             item["ai_reasoning"] = reason or ""
             scored += 1
             log.info(f"  {score}/10 — {item.get('title', '')[:50]}")
-        time.sleep(1.5)  # stay under 15 req/min free tier limit
+        time.sleep(0.5)
 
     return listings_db, scored
