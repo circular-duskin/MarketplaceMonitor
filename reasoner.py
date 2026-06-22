@@ -81,8 +81,9 @@ def build_taste_profile(liked_listings: list) -> str:
         "type": "text",
         "text": (
             "Describe this user's visual taste profile in 3-4 sentences. "
-            "Focus on: silhouette, colors, embellishments, fabric/texture, and overall aesthetic. "
-            "Be specific and concrete."
+            "Focus on: silhouette, embellishments, fabric/texture, and overall aesthetic. "
+            "Do NOT factor in color — the user is open to all colors except yellow and orange. "
+            "Be specific and concrete about what makes these dresses appealing beyond color."
         ),
     })
 
@@ -115,6 +116,13 @@ def score_listing(listing: dict, taste_profile: str) -> tuple:
             "text": (
                 f"User's visual taste profile for figure skating dresses:\n{taste_profile}\n\n"
                 "Rate this dress 1-10 on how well it matches the profile. "
+                "Scoring rules:\n"
+                "- Color does NOT affect the score — the user likes all colors except yellow and orange. "
+                "Only deduct points if the dress is clearly yellow or orange.\n"
+                "- Judge skirt style only from what is clearly visible in the image. "
+                "If the skirt is partially visible or ambiguous, do not penalize it.\n"
+                "- Focus scoring on: silhouette, embellishments (crystals, beading), "
+                "fabric quality, and competition-readiness.\n"
                 "Reply in this exact format:\n"
                 "SCORE: [1-10]\n"
                 "REASON: [one sentence]"
