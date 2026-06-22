@@ -149,7 +149,7 @@ def score_listing(listing: dict, taste_profile: str) -> tuple:
                 reason = line.replace("REASON:", "").strip()
         return score, reason
     except Exception as e:
-        log.error(f"Claude scoring error: {e}")
+        log.error(f"Claude scoring error for '{listing.get('title','')[:40]}': {e}")
         return None, None
 
 
@@ -193,6 +193,6 @@ def run_reasoning(listings_db: dict, feedback: dict, force_rescore: bool = False
             item["ai_reasoning"] = reason or ""
             scored += 1
             log.info(f"  {score}/10 — {item.get('title', '')[:50]}")
-        time.sleep(0.5)
+        time.sleep(4)
 
     return listings_db, scored
